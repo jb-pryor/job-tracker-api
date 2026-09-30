@@ -5,7 +5,11 @@ from sqlalchemy import select
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import JobApplication, User
-from app.schemas import ApplicationCreate, ApplicationRead
+from app.schemas import (
+    ApplicationCreate,
+    ApplicationRead,
+    ApplicationUpdate,
+)
 
 router = APIRouter(
     prefix="/applications",
@@ -85,4 +89,42 @@ def get_application(
             detail="Application not found.",
         )
 
+    return application
+
+
+@router.patch("/{application_id}", response_model=ApplicationRead)
+def update_application(
+    application_id: int,
+    application_data: ApplicationUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    application = db.scalar(
+        select(JobApplication).where(
+            JobApplication.id == application_id,
+            JobApplication.user_id == current_user.id,
+        )
+    )
+
+    if application is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Application not found.",
+        )
+
+    updates = application_data.model_dump(exclude_unset=True)
+
+    for field, value in updates.items():
+        if field == "job_url" and value is not None:
+            value = str(value)
+
+        setattr(application, field, value)
+
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    db.refresh(application)
     return application

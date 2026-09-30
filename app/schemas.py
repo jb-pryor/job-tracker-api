@@ -69,3 +69,36 @@ class ApplicationRead(BaseModel):
     applied_on: date | None
     created_at: datetime
     updated_at: datetime
+
+
+class ApplicationUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    company: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=100,
+    )
+    job_title: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=150,
+    )
+    status: ApplicationStatus | None = None
+    job_url: HttpUrl | None = None
+    notes: str | None = Field(default=None, max_length=2000)
+    applied_on: date | None = None
+
+    @field_validator("company", "job_title", mode="before")
+    @classmethod
+    def trim_text(cls, value):
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+    @field_validator("company", "job_title", "status")
+    @classmethod
+    def reject_null(cls, value):
+        if value is None:
+            raise ValueError("This field cannot be null.")
+        return value
