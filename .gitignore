@@ -1,0 +1,18 @@
+# Python environments
+.venv/
+venv/
+
+# Python generated files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
