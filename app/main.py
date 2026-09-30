@@ -5,9 +5,13 @@ from app.models import User
 from app.routers.auth import router as auth_router
 from app.schemas import UserRead
 
+from app.routers.applications import router as applications_router
+
 app = FastAPI(title="Job Tracker API")
 
 app.include_router(auth_router)
+
+app.include_router(applications_router)
 
 
 @app.get("/health")
