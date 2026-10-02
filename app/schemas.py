@@ -102,3 +102,11 @@ class ApplicationUpdate(BaseModel):
         if value is None:
             raise ValueError("This field cannot be null.")
         return value
+    
+    
+    
+class ApplicationList(BaseModel):
+  items: list[ApplicationRead]
+  total: int
+  limit: int
+  offset: int

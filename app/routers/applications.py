@@ -1,13 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import JobApplication, User
 from app.schemas import (
     ApplicationCreate,
+    ApplicationList,
     ApplicationRead,
+    ApplicationStatus,
     ApplicationUpdate,
 )
 
@@ -53,22 +55,49 @@ def create_application(
     return application
 
 
-@router.get("", response_model=list[ApplicationRead])
+@router.get("", response_model=ApplicationList)
 def list_applications(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    status: ApplicationStatus | None = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
 ):
+    filters = [
+        JobApplication.user_id == current_user.id,
+    ]
+
+    if status is not None:
+        filters.append(JobApplication.status == status)
+
+    total = db.scalar(
+        select(func.count())
+        .select_from(JobApplication)
+        .where(*filters)
+    )
+
     statement = (
         select(JobApplication)
-        .where(JobApplication.user_id == current_user.id)
+        .where(*filters)
         .order_by(
             JobApplication.created_at.desc(),
             JobApplication.id.desc(),
         )
+        .limit(limit)
+        .offset(offset)
     )
 
     applications = db.scalars(statement).all()
-    return applications
+
+    return ApplicationList(
+        items=[
+            ApplicationRead.model_validate(application)
+            for application in applications
+        ],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 @router.get("/{application_id}", response_model=ApplicationRead)
 def get_application(
