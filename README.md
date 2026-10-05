@@ -1,75 +1,36 @@
 # Job Tracker API
 
-A backend API for tracking job applications, built with Python, FastAPI, and PostgreSQL.
+A REST API for tracking job applications, built with Python, FastAPI, and PostgreSQL. Users can create an account and manage their own applications, including status, notes, and application dates.
 
-Users can register, log in, and create, retrieve, update, and delete their own job applications. Authentication uses signed JWT access tokens, and application queries enforce user ownership.
+## Features
 
-## Implemented Features
+- Account registration with Argon2 password hashing
+- Login with JWT access tokens
+- User ownership checks on application endpoints
+- Create, retrieve, update, and delete job applications
+- Filter applications by status
+- Paginate results using `limit` and `offset`
+- Input validation and HTTP error responses
+- Database migrations with Alembic
+- 16 automated tests backed by a separate PostgreSQL database
+- GitHub Actions workflow that runs tests on pushes and pull requests
 
-- Account registration with email normalization and password validation
-- Argon2 password hashing
-- Login with JWT access tokens that expire after 30 minutes
-- Protected current-user endpoint
-- Job application creation, listing, retrieval, partial updates, and deletion
-- Ownership checks that restrict access to each user's records
-- Input validation for required fields, statuses, dates, URLs, and field lengths
-- Duplicate-email handling and appropriate HTTP error responses
-- PostgreSQL persistence with Alembic migrations
-- Interactive API documentation through Swagger UI
+Supported application statuses: `saved`, `applied`, `interviewing`, `offer`, and `rejected`.
 
 ## Tech Stack
 
-| Technology      | Purpose                                    |
-| --------------- | ------------------------------------------ |
-| Python          | Application language                       |
-| FastAPI         | API framework and dependency injection     |
-| PostgreSQL      | Database                                   |
-| SQLAlchemy      | Database models, queries, and transactions |
-| Alembic         | Database migrations                        |
-| Pydantic        | Request validation and response schemas    |
-| pwdlib / Argon2 | Password hashing and verification          |
-| PyJWT           | Access token creation and verification     |
-| python-dotenv   | Local environment configuration            |
-
-## API Endpoints
-
-| Method | Endpoint                         | Description                                | Authentication |
-| ------ | -------------------------------- | ------------------------------------------ | -------------- |
-| GET    | `/health`                        | Check that the API is running              | No             |
-| POST   | `/auth/register`                 | Register an account                        | No             |
-| POST   | `/auth/token`                    | Log in and receive an access token         | No             |
-| GET    | `/users/me`                      | Retrieve the authenticated user            | Yes            |
-| POST   | `/applications`                  | Create a job application                   | Yes            |
-| GET    | `/applications`                  | List the user's applications, newest first | Yes            |
-| GET    | `/applications/{application_id}` | Retrieve one owned application             | Yes            |
-| PATCH  | `/applications/{application_id}` | Partially update an owned application      | Yes            |
-| DELETE | `/applications/{application_id}` | Delete an owned application                | Yes            |
-
-Login accepts form fields named `username` and `password`. The `username` field contains the account's email address.
-
-Protected endpoints require:
-
-```http
-Authorization: Bearer <access_token>
-```
-
-## Job Application Fields
-
-Applications store a company, job title, status, optional job URL, optional notes, optional application date, and creation/update timestamps.
-
-Supported statuses:
-
-- `saved`
-- `applied`
-- `interviewing`
-- `offer`
-- `rejected`
-
-Application ownership is assigned from the authenticated user. Clients cannot choose or update the owner.
+- **FastAPI** — API routing and interactive documentation
+- **Pydantic** — Request validation and response schemas
+- **SQLAlchemy / Psycopg** — Database queries and PostgreSQL connectivity
+- **PostgreSQL** — Persistent storage
+- **Alembic** — Database migrations
+- **pwdlib / Argon2** — Password hashing
+- **PyJWT** — Access token creation and verification
+- **pytest** — Automated testing
 
 ## Local Setup
 
-The instructions below use macOS, Homebrew, and Python 3.13.
+Requires Python 3.13 and a running PostgreSQL instance.
 
 ### 1. Clone the repository
 
@@ -78,137 +39,137 @@ git clone https://github.com/jb-pryor/job-tracker-api.git
 cd job-tracker-api
 ```
 
-### 2. Create and activate a virtual environment
+### 2. Create a virtual environment and install dependencies
 
 ```bash
-python3.13 -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
-```
-
-### 3. Install dependencies
-
-```bash
 python -m pip install -r requirements.txt
 ```
 
-### 4. Install and start PostgreSQL
+On Windows, activate the environment with `.venv\Scripts\activate`.
 
-If PostgreSQL is not already installed:
+### 3. Configure the database and environment
 
-```bash
-brew install postgresql@17
-brew services start postgresql@17
-```
-
-Create the project database once:
-
-```bash
-"$(brew --prefix postgresql@17)/bin/createdb" job_tracker
-```
-
-### 5. Configure environment variables
-
-Copy the example configuration:
+Create a PostgreSQL database named `job_tracker`. Copy the environment template:
 
 ```bash
 cp .env.example .env
 ```
 
-Update `.env` using your local PostgreSQL username:
+Set the database connection and JWT secret in `.env`:
 
 ```dotenv
-DATABASE_URL=postgresql+psycopg://YOUR_DATABASE_USER@/job_tracker?host=/tmp
+DATABASE_URL=postgresql+psycopg://YOUR_USER:YOUR_PASSWORD@localhost:5432/job_tracker
 JWT_SECRET_KEY=YOUR_RANDOM_SECRET
+TEST_DATABASE_URL=postgresql+psycopg://YOUR_USER:YOUR_PASSWORD@localhost:5432/job_tracker_test
 ```
 
-This database URL uses the local Unix socket created by the Homebrew installation. Other environments may require a different connection URL.
-
-Generate a signing secret:
+Use credentials that match your PostgreSQL installation. Generate a JWT secret with:
 
 ```bash
-python -c 'import secrets; print(secrets.token_hex(32))'
+python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-Paste the generated value into `JWT_SECRET_KEY`.
+Keep `.env` out of version control.
 
-The `.env` file is ignored by Git. Keep real configuration values out of the repository.
-
-### 6. Apply database migrations
+### 4. Apply migrations
 
 ```bash
 python -m alembic upgrade head
 ```
 
-### 7. Run the development server
+### 5. Start the API
 
 ```bash
 python -m uvicorn app.main:app --reload
 ```
 
-Open:
+Interactive API documentation is available at:
 
-- Health endpoint: http://127.0.0.1:8000/health
-- Interactive documentation: http://127.0.0.1:8000/docs
+http://127.0.0.1:8000/docs
 
-## Example Application Request
+## Endpoints
 
-Send this JSON to `POST /applications` after authenticating:
+| Method | Endpoint             | Description                                                     |
+| ------ | -------------------- | --------------------------------------------------------------- |
+| POST   | `/auth/register`     | Create an account                                               |
+| POST   | `/auth/token`        | Log in and receive an access token                              |
+| GET    | `/users/me`          | Retrieve the authenticated user's profile                       |
+| POST   | `/applications`      | Create a job application                                        |
+| GET    | `/applications`      | List applications with optional status filtering and pagination |
+| GET    | `/applications/{id}` | Retrieve one application                                        |
+| PATCH  | `/applications/{id}` | Update selected application fields                              |
+| DELETE | `/applications/{id}` | Delete an application                                           |
+
+The profile and application endpoints require a bearer token. Users can access only their own applications.
+
+Login accepts form fields named `username` and `password`; use the account's email as `username`. Include the returned token in subsequent requests:
+
+```http
+Authorization: Bearer <access_token>
+```
+
+### Example application
 
 ```json
 {
   "company": "Example Company",
-  "job_title": "Software Engineer I",
+  "job_title": "Junior Software Engineer",
   "status": "applied",
   "job_url": "https://example.com/careers/123",
-  "notes": "Submitted through the company website.",
-  "applied_on": "2026-09-29"
+  "notes": "Applied through the company website.",
+  "applied_on": "2026-10-05"
 }
 ```
 
-To update only the status, send this to `PATCH /applications/{application_id}`:
+To filter and paginate a list:
 
-```json
-{
-  "status": "interviewing"
-}
+```http
+GET /applications?status=applied&limit=20&offset=0
 ```
 
-Omitted fields remain unchanged. Optional fields can be cleared with `null`; required fields cannot.
+The response includes `items`, `total`, `limit`, and `offset`. `total` counts matching applications before pagination.
 
-## Error Handling
+## Testing
 
-| Status | Meaning                                               |
-| ------ | ----------------------------------------------------- |
-| `401`  | Missing, invalid, or expired authentication           |
-| `404`  | Application does not exist or belongs to another user |
-| `409`  | An account with the email already exists              |
-| `422`  | Invalid request data                                  |
+Tests use a separate database named `job_tracker_test`. Create that database and configure `TEST_DATABASE_URL` in `.env`, then apply migrations to it:
 
-Successful creation returns `201`. Successful deletion returns `204` with no response body.
+```bash
+DATABASE_URL='postgresql+psycopg://YOUR_USER:YOUR_PASSWORD@localhost:5432/job_tracker_test' \
+  python -m alembic upgrade head
+```
 
-## Verification Completed
+Run the test suite:
 
-The following behaviors have been checked manually through the interactive documentation:
+```bash
+python -m pytest -v
+```
 
-- Successful registration and duplicate-email rejection
-- Correct and incorrect login credentials
-- Protected endpoint access with and without authentication
-- Successful application creation and blank-company rejection
-- Separate application lists for different users
-- Ownership checks for fetching, updating, and deleting records
-- Partial updates that preserve omitted fields
-- Clearing optional notes and rejecting invalid required-field updates
-- Successful deletion and subsequent `404` responses
+The tests cover registration, password hashing, login, protected endpoints, application creation and updates, deletion, ownership checks, validation, filtering, and pagination. Database changes are rolled back after each test.
 
-Automated tests have not been added yet.
+PostgreSQL must be running, but Uvicorn is not required for testing.
 
-## Next Steps
+## Continuous Integration
 
-- Status filtering and pagination
-- Automated tests with a separate PostgreSQL test database
-- GitHub Actions for continuous integration
-- Deployment
+The workflow in `.github/workflows/tests.yml` runs on pushes and pull requests. It installs dependencies, starts a temporary PostgreSQL database, applies migrations, and runs the test suite.
 
-## Project Status
+## Project Structure
 
-In development. Authentication and job application CRUD are implemented and manually verified.
+```text
+app/
+    main.py           Application setup
+    database.py       Database connection and sessions
+    models.py         Database models
+    schemas.py        Input and output schemas
+    security.py       Password hashing and JWT handling
+    dependencies.py   Authentication dependencies
+    routers/          API endpoints
+alembic/              Database migrations
+tests/                Test fixtures and automated tests
+.github/workflows/    GitHub Actions configuration
+```
+
+## Status
+
+The backend is implemented and tested locally, with automated tests running in GitHub Actions. Deployment and a frontend are planned.
