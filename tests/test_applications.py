@@ -121,3 +121,116 @@ def test_other_user_cannot_read_application(client):
         headers=owner_headers,
     )
     assert owner_response.status_code == 200
+
+
+
+def test_update_application(client):
+    headers = authenticate(client, "update@example.com")
+
+    created = client.post(
+        "/applications",
+        headers=headers,
+        json={
+            "company": "Example Company",
+            "job_title": "Junior Software Engineer",
+            "notes": "Original notes",
+        },
+    )
+    assert created.status_code == 201
+    application_id = created.json()["id"]
+
+    updated = client.patch(
+        f"/applications/{application_id}",
+        headers=headers,
+        json={"status": "applied", "notes": None},
+    )
+
+    assert updated.status_code == 200
+
+    # Fetch again to verify the changes were saved.
+    fetched = client.get(
+        f"/applications/{application_id}",
+        headers=headers,
+    )
+    assert fetched.status_code == 200
+
+    application = fetched.json()
+    assert application["status"] == "applied"
+    assert application["notes"] is None
+    assert application["company"] == "Example Company"
+    assert application["job_title"] == "Junior Software Engineer"
+
+
+def test_delete_application(client):
+    headers = authenticate(client, "delete@example.com")
+
+    created = client.post(
+        "/applications",
+        headers=headers,
+        json={
+            "company": "Example Company",
+            "job_title": "Junior Software Engineer",
+        },
+    )
+    assert created.status_code == 201
+    application_id = created.json()["id"]
+
+    deleted = client.delete(
+        f"/applications/{application_id}",
+        headers=headers,
+    )
+
+    assert deleted.status_code == 204
+    assert deleted.content == b""
+
+    fetched = client.get(
+        f"/applications/{application_id}",
+        headers=headers,
+    )
+    assert fetched.status_code == 404
+
+    # Deleting the same record again should report that it is missing.
+    repeated = client.delete(
+        f"/applications/{application_id}",
+        headers=headers,
+    )
+    assert repeated.status_code == 404
+
+
+def test_other_user_cannot_update_or_delete_application(client):
+    owner_headers = authenticate(client, "protected-owner@example.com")
+    other_headers = authenticate(client, "protected-other@example.com")
+
+    created = client.post(
+        "/applications",
+        headers=owner_headers,
+        json={
+            "company": "Example Company",
+            "job_title": "Junior Software Engineer",
+        },
+    )
+    assert created.status_code == 201
+    application_id = created.json()["id"]
+
+    updated = client.patch(
+        f"/applications/{application_id}",
+        headers=other_headers,
+        json={"status": "rejected"},
+    )
+    assert updated.status_code == 404
+
+    deleted = client.delete(
+        f"/applications/{application_id}",
+        headers=other_headers,
+    )
+    assert deleted.status_code == 404
+
+    # Verify both attempts left the owner's record intact.
+    fetched = client.get(
+        f"/applications/{application_id}",
+        headers=owner_headers,
+    )
+
+    assert fetched.status_code == 200
+    assert fetched.json()["status"] == "saved"
+    assert fetched.json()["company"] == "Example Company"
