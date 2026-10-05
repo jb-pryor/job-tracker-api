@@ -54,3 +54,77 @@ def test_duplicate_email_returns_conflict(client):
     )
 
     assert third_response.status_code == 201
+
+
+def test_login_returns_access_token(client):
+    email = "login@example.com"
+    password = "a-long-practice-password"
+
+    registration = client.post(
+        "/auth/register",
+        json={"email": email, "password": password},
+    )
+    assert registration.status_code == 201
+
+    response = client.post(
+        "/auth/token",
+        data={"username": email, "password": password},
+    )
+
+    assert response.status_code == 200
+
+    token = response.json()
+    assert token["token_type"] == "bearer"
+    assert isinstance(token["access_token"], str)
+    assert token["access_token"]
+
+    # Verify that the issued token actually authenticates this user.
+    profile = client.get(
+        "/users/me",
+        headers={
+            "Authorization": f"Bearer {token['access_token']}"
+        },
+    )
+
+    assert profile.status_code == 200
+    assert profile.json()["id"] == registration.json()["id"]
+    assert profile.json()["email"] == email
+
+
+def test_login_rejects_wrong_password(client):
+    email = "wrong-password@example.com"
+
+    registration = client.post(
+        "/auth/register",
+        json={
+            "email": email,
+            "password": "a-long-practice-password",
+        },
+    )
+    assert registration.status_code == 201
+
+    response = client.post(
+        "/auth/token",
+        data={
+            "username": email,
+            "password": "an-incorrect-password",
+        },
+    )
+
+    assert response.status_code == 401
+    assert "access_token" not in response.json()
+
+
+def test_current_user_requires_token(client):
+    response = client.get("/users/me")
+
+    assert response.status_code == 401
+
+
+def test_current_user_rejects_invalid_token(client):
+    response = client.get(
+        "/users/me",
+        headers={"Authorization": "Bearer invalid-token"},
+    )
+
+    assert response.status_code == 401
