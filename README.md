@@ -6,7 +6,7 @@ Deployed on Vercel with PostgreSQL hosted on Neon.
 
 ## Live API
 
-[Interactive API documentation](job-tracker-api-blush.vercel.app/docs)
+[Interactive API documentation](https://job-tracker-api-blush.vercel.app/docs)
 
 To try the API, register an account using `/auth/register`, then click **Authorize** and log in using your email and password. You can then create and manage applications.
 
