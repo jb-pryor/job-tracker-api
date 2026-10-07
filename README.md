@@ -1,6 +1,14 @@
 # Job Tracker API
 
-A REST API for tracking job applications, built with Python, FastAPI, and PostgreSQL. Users can create an account and manage their own applications, including status, notes, and application dates.
+A REST API for tracking job applications, built with Python, FastAPI, and PostgreSQL. Users can register, log in, and manage their own applications, including status, notes, and application dates.
+
+Deployed on Vercel with PostgreSQL hosted on Neon.
+
+## Live API
+
+[Interactive API documentation](job-tracker-api-blush.vercel.app/docs)
+
+To try the API, register an account using `/auth/register`, then click **Authorize** and log in using your email and password. You can then create and manage applications.
 
 ## Features
 
@@ -12,10 +20,10 @@ A REST API for tracking job applications, built with Python, FastAPI, and Postgr
 - Paginate results using `limit` and `offset`
 - Input validation and HTTP error responses
 - Database migrations with Alembic
-- 16 automated tests backed by a separate PostgreSQL database
+- 16 automated tests using a separate PostgreSQL database
 - GitHub Actions workflow that runs tests on pushes and pull requests
 
-Supported application statuses: `saved`, `applied`, `interviewing`, `offer`, and `rejected`.
+Supported statuses: `saved`, `applied`, `interviewing`, `offer`, and `rejected`.
 
 ## Tech Stack
 
@@ -27,6 +35,7 @@ Supported application statuses: `saved`, `applied`, `interviewing`, `offer`, and
 - **pwdlib / Argon2** — Password hashing
 - **PyJWT** — Access token creation and verification
 - **pytest** — Automated testing
+- **Vercel / Neon** — API and database hosting
 
 ## Local Setup
 
@@ -85,22 +94,22 @@ python -m alembic upgrade head
 python -m uvicorn app.main:app --reload
 ```
 
-Interactive API documentation is available at:
+Open the local interactive documentation at:
 
 http://127.0.0.1:8000/docs
 
 ## Endpoints
 
-| Method | Endpoint             | Description                                                     |
-| ------ | -------------------- | --------------------------------------------------------------- |
-| POST   | `/auth/register`     | Create an account                                               |
-| POST   | `/auth/token`        | Log in and receive an access token                              |
-| GET    | `/users/me`          | Retrieve the authenticated user's profile                       |
-| POST   | `/applications`      | Create a job application                                        |
-| GET    | `/applications`      | List applications with optional status filtering and pagination |
-| GET    | `/applications/{id}` | Retrieve one application                                        |
-| PATCH  | `/applications/{id}` | Update selected application fields                              |
-| DELETE | `/applications/{id}` | Delete an application                                           |
+| Method | Endpoint             | Description                                            |
+| ------ | -------------------- | ------------------------------------------------------ |
+| POST   | `/auth/register`     | Create an account                                      |
+| POST   | `/auth/token`        | Log in and receive an access token                     |
+| GET    | `/users/me`          | Retrieve the authenticated user's profile              |
+| POST   | `/applications`      | Create a job application                               |
+| GET    | `/applications`      | List applications with status filtering and pagination |
+| GET    | `/applications/{id}` | Retrieve one application                               |
+| PATCH  | `/applications/{id}` | Update selected application fields                     |
+| DELETE | `/applications/{id}` | Delete an application                                  |
 
 The profile and application endpoints require a bearer token. Users can access only their own applications.
 
@@ -146,13 +155,21 @@ Run the test suite:
 python -m pytest -v
 ```
 
-The tests cover registration, password hashing, login, protected endpoints, application creation and updates, deletion, ownership checks, validation, filtering, and pagination. Database changes are rolled back after each test.
+The 16 tests cover registration, password hashing, login, protected endpoints, application creation and updates, deletion, ownership checks, validation, filtering, and pagination. Database changes are rolled back after each test.
 
 PostgreSQL must be running, but Uvicorn is not required for testing.
 
 ## Continuous Integration
 
 The workflow in `.github/workflows/tests.yml` runs on pushes and pull requests. It installs dependencies, starts a temporary PostgreSQL database, applies migrations, and runs the test suite.
+
+## Deployment
+
+The API runs on Vercel and connects to a PostgreSQL database hosted on Neon. The database connection URL and JWT secret are configured through Vercel environment variables.
+
+Alembic migrations create and update the hosted database schema. Local development and automated tests use separate databases.
+
+Registration, login, application creation, and retrieval have been verified on the deployed API.
 
 ## Project Structure
 
@@ -172,4 +189,4 @@ tests/                Test fixtures and automated tests
 
 ## Status
 
-The backend is implemented and tested locally, with automated tests running in GitHub Actions. Deployment and a frontend are planned.
+The backend is deployed, with 16 passing automated tests and a working GitHub Actions workflow. A frontend dashboard is planned.
