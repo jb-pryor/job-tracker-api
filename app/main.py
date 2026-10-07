@@ -7,7 +7,20 @@ from app.schemas import UserRead
 
 from app.routers.applications import router as applications_router
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="Job Tracker API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
+)
 
 app.include_router(auth_router)
 
