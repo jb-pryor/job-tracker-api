@@ -13,6 +13,7 @@ from app.schemas import (
     ApplicationUpdate,
 )
 
+# All routes below start with /applications and share a section in the docs.
 router = APIRouter(
     prefix="/applications",
     tags=["Applications"],
@@ -29,6 +30,7 @@ def create_application(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # Assign ownership using the authenticated user, rather than a submitted user ID.
     application = JobApplication(
         user_id=current_user.id,
         company=application_data.company,
@@ -45,12 +47,14 @@ def create_application(
 
     db.add(application)
 
+    # Commit saves the transaction; rollback resets it if saving fails.
     try:
         db.commit()
     except Exception:
         db.rollback()
         raise
 
+    # Reload database-generated values, such as the ID and timestamps.
     db.refresh(application)
     return application
 
@@ -63,6 +67,7 @@ def list_applications(
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
 ):
+    # Every list query is restricted to the authenticated user's applications.
     filters = [
         JobApplication.user_id == current_user.id,
     ]
@@ -70,12 +75,14 @@ def list_applications(
     if status is not None:
         filters.append(JobApplication.status == status)
 
+    # Count all matching applications before applying pagination.
     total = db.scalar(
         select(func.count())
         .select_from(JobApplication)
         .where(*filters)
     )
 
+    # Return newest first, using the ID to break ties between timestamps.
     statement = (
         select(JobApplication)
         .where(*filters)
@@ -89,6 +96,7 @@ def list_applications(
 
     applications = db.scalars(statement).all()
 
+    # Convert database objects into response schemas and include pagination details.
     return ApplicationList(
         items=[
             ApplicationRead.model_validate(application)
@@ -99,12 +107,14 @@ def list_applications(
         offset=offset,
     )
 
+
 @router.get("/{application_id}", response_model=ApplicationRead)
 def get_application(
     application_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # Match both the application ID and owner so other users cannot access it.
     statement = select(JobApplication).where(
         JobApplication.id == application_id,
         JobApplication.user_id == current_user.id,
@@ -141,9 +151,11 @@ def update_application(
             detail="Application not found.",
         )
 
+    # PATCH changes only submitted fields, including explicitly submitted nulls.
     updates = application_data.model_dump(exclude_unset=True)
 
     for field, value in updates.items():
+        # Convert Pydantic URL values to strings for database storage.
         if field == "job_url" and value is not None:
             value = str(value)
 
@@ -190,4 +202,5 @@ def delete_application(
         db.rollback()
         raise
 
+    # A successful deletion returns 204 with no response body.
     return Response(status_code=status.HTTP_204_NO_CONTENT)

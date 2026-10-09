@@ -15,23 +15,27 @@ from app.database import Base
 
 
 class User(Base):
-    __tablename__ = "users" #users database
+    # Map this model to the users table.
+    __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
-    email: Mapped[str] = mapped_column(  #email
+    # Require an email and prevent duplicate emails at the database level.
+    email: Mapped[str] = mapped_column(
         String(254),
         unique=True,
         nullable=False,
     )
 
-    password_hash: Mapped[str] = mapped_column( #password
+    # Store the password hash, never the original password.
+    password_hash: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
     )
 
-    created_at: Mapped[datetime] = mapped_column( #and time created
-        DateTime(timezone=True), 
+    # PostgreSQL supplies the creation timestamp when inserting a user.
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
         server_default=func.now(),
         nullable=False,
     )
@@ -40,6 +44,7 @@ class User(Base):
 class JobApplication(Base):
     __tablename__ = "job_applications"
 
+    # Enforce allowed statuses in the database as well as in API validation.
     __table_args__ = (
         CheckConstraint(
             "status IN ('saved', 'applied', 'interviewing', 'offer', 'rejected')",
@@ -49,6 +54,7 @@ class JobApplication(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
+    # Link each application to an existing user; the index helps ownership queries.
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id"),
         nullable=False,
@@ -71,6 +77,7 @@ class JobApplication(Base):
         server_default="saved",
     )
 
+    # Optional fields allow NULL when no value is provided.
     job_url: Mapped[str | None] = mapped_column(Text)
 
     notes: Mapped[str | None] = mapped_column(Text)
@@ -83,6 +90,7 @@ class JobApplication(Base):
         nullable=False,
     )
 
+    # SQLAlchemy sets updated_at when it emits an UPDATE without an explicit value.
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

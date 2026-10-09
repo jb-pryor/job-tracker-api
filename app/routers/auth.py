@@ -25,6 +25,7 @@ def register_user(
     user_data: UserCreate,
     db: Session = Depends(get_db),
 ):
+    # Store a password hash rather than the original password.
     user = User(
         email=str(user_data.email),
         password_hash=hash_password(user_data.password),
@@ -37,6 +38,8 @@ def register_user(
     except IntegrityError as error:
         db.rollback()
 
+        # PostgreSQL code 23505 means a unique constraint was violated.
+        # Check the constraint name to identify a duplicate email specifically.
         if (
             getattr(error.orig, "sqlstate", None) == "23505"
             and getattr(
@@ -52,6 +55,7 @@ def register_user(
 
         raise
 
+    # Reload database-generated values; UserRead excludes the password hash.
     db.refresh(user)
     return user
 
@@ -61,12 +65,14 @@ def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
+    # The login form calls this field "username"; our API uses it for email.
     email = form_data.username.strip().lower()
 
     user = db.scalar(
         select(User).where(User.email == email)
     )
 
+    # Use the same error for an unknown email and an incorrect password.
     if user is None or not verify_password(
         form_data.password,
         user.password_hash,
@@ -77,6 +83,7 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # Return a signed token for authenticating subsequent API requests.
     return Token(
         access_token=create_access_token(user.id),
         token_type="bearer",
