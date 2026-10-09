@@ -2,13 +2,17 @@
 
 A REST API for tracking job applications, built with Python, FastAPI, and PostgreSQL. Users can register, log in, and manage their own applications, including status, notes, and application dates.
 
-Deployed on Vercel with PostgreSQL hosted on Neon.
+Deployed on Vercel with PostgreSQL hosted on Neon. A separate React and TypeScript frontend provides a dashboard for using the API.
 
-## Live API
+## Live Demo and API
 
-[Interactive API documentation](https://job-tracker-api-blush.vercel.app/docs)
+- [Frontend dashboard](https://job-tracker-web-one.vercel.app/)
+- [Interactive API documentation](https://job-tracker-api-blush.vercel.app/docs)
+- [Frontend repository](https://github.com/jb-pryor/job-tracker-web)
 
-To try the API, register an account using `/auth/register`, then click **Authorize** and log in using your email and password. You can then create and manage applications.
+Use the dashboard to register, log in, and manage applications.
+
+To try the API directly, register an account using `/auth/register`, then click **Authorize** in the documentation and enter your email and password. Use your email in the `username` field.
 
 ## Features
 
@@ -102,6 +106,7 @@ http://127.0.0.1:8000/docs
 
 | Method | Endpoint             | Description                                            |
 | ------ | -------------------- | ------------------------------------------------------ |
+| GET    | `/health`            | Check that the API is responding                       |
 | POST   | `/auth/register`     | Create an account                                      |
 | POST   | `/auth/token`        | Log in and receive an access token                     |
 | GET    | `/users/me`          | Retrieve the authenticated user's profile              |
@@ -118,6 +123,10 @@ Login accepts form fields named `username` and `password`; use the account's ema
 ```http
 Authorization: Bearer <access_token>
 ```
+
+Access tokens expire after 30 minutes. Password hashes are excluded from user responses.
+
+The `/health` endpoint confirms that the API responds; it does not check database connectivity.
 
 ### Example application
 
@@ -139,6 +148,8 @@ GET /applications?status=applied&limit=20&offset=0
 ```
 
 The response includes `items`, `total`, `limit`, and `offset`. `total` counts matching applications before pagination.
+
+PATCH requests update only submitted fields. Optional fields such as `notes`, `job_url`, and `applied_on` can be cleared by sending `null`. Company, job title, and status cannot be set to `null`.
 
 ## Testing
 
@@ -169,13 +180,19 @@ The API runs on Vercel and connects to a PostgreSQL database hosted on Neon. The
 
 Alembic migrations create and update the hosted database schema. Local development and automated tests use separate databases.
 
+The React and TypeScript frontend is deployed separately on Vercel. The API's CORS configuration allows browser requests from:
+
+- `http://localhost:5173`
+- `http://127.0.0.1:5173`
+- `https://job-tracker-web-one.vercel.app`
+
 Registration, login, application creation, and retrieval have been verified on the deployed API.
 
 ## Project Structure
 
 ```text
 app/
-    main.py           Application setup
+    main.py           Application setup and CORS configuration
     database.py       Database connection and sessions
     models.py         Database models
     schemas.py        Input and output schemas
@@ -189,4 +206,6 @@ tests/                Test fixtures and automated tests
 
 ## Status
 
-The backend is deployed, with 16 passing automated tests and a working GitHub Actions workflow. A frontend dashboard is planned.
+The backend and frontend are deployed. The API has 16 passing automated tests and a working GitHub Actions workflow.
+
+The dashboard supports registration, login, application creation, editing, status updates, deletion, filtering, and pagination.
